@@ -3,11 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lesson Countdown Timer</title>
+    <title>Abingdon Lesson Timer</title>
+    <!-- Pulling in a clean, modern font to match Abingdon's recent rebrand -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    
     <style>
+        :root {
+            --abingdon-cerise: #E64097;
+            --abingdon-navy: #0F172A;
+            --abingdon-grey: #64748B;
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f7f6;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--abingdon-navy);
             color: #333;
             display: flex;
             flex-direction: column;
@@ -15,116 +24,185 @@
             justify-content: center;
             height: 100vh;
             margin: 0;
+            background-image: radial-gradient(circle at top right, #1e293b, #0f172a);
         }
+
         .container {
             background-color: white;
             padding: 40px;
             border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
             text-align: center;
             width: 90%;
             max-width: 500px;
+            /* Abingdon Cerise brand accent */
+            border-top: 8px solid var(--abingdon-cerise); 
         }
-        h1 {
-            margin-top: 0;
-            font-size: 1.8rem;
-            color: #2c3e50;
+
+        .brand-title {
+            margin: 0;
+            font-size: 2.2rem;
+            font-weight: 800;
+            letter-spacing: 0.15em;
+            color: var(--abingdon-cerise);
+            text-transform: uppercase;
         }
+
+        .brand-subtitle {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--abingdon-navy);
+            font-weight: 600;
+            margin-bottom: 25px;
+            margin-top: 5px;
+        }
+
         select {
             width: 100%;
-            font-size: 1.2rem;
-            padding: 10px;
-            margin: 20px 0;
-            border: 2px solid #bdc3c7;
+            font-size: 1.1rem;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            padding: 12px;
+            margin: 10px 0 25px 0;
+            border: 2px solid #E2E8F0;
             border-radius: 8px;
             outline: none;
             cursor: pointer;
+            color: var(--abingdon-navy);
+            background-color: #F8FAFC;
+            transition: border-color 0.2s;
         }
+
         select:focus {
-            border-color: #3498db;
+            border-color: var(--abingdon-cerise);
         }
-        #timer {
-            font-size: 4rem;
-            font-weight: bold;
-            color: #e74c3c;
-            margin-top: 10px;
-            font-variant-numeric: tabular-nums; /* Keeps numbers from shifting */
-        }
+
         #status {
-            font-size: 1.2rem;
-            color: #7f8c8d;
-            margin-top: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--abingdon-grey);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        #timer {
+            font-size: 4.5rem;
+            font-weight: 800;
+            color: var(--abingdon-navy);
+            margin-top: 5px;
+            font-variant-numeric: tabular-nums;
+            line-height: 1.1;
+        }
+
+        /* Pulse animation for when the lesson is active */
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.8; }
+            100% { opacity: 1; }
+        }
+        
+        .active-lesson {
+            color: var(--abingdon-cerise) !important;
+            animation: pulse 2s infinite;
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Lesson Countdown</h1>
+    <h1 class="brand-title">Abingdon</h1>
+    <div class="brand-subtitle">Lesson Timer</div>
     
     <label for="periodSelect" style="display:none;">Select Period</label>
     <select id="periodSelect">
-        <!-- Values are the end times in 24-hour HH:MM format -->
-        <option value="09:55">P1 (9:00 am - 9:55 am)</option>
-        <option value="10:55">P2 (10:00 am - 10:55 am)</option>
-        <option value="12:10">P3 (11:15 am - 12:10 pm)</option>
-        <option value="13:05">P4 (12:15 pm - 1:05 pm)</option>
-        <option value="13:45">P5 (12:55 pm - 1:45 pm)</option>
-        <option value="14:55">P6 (2:05 pm - 2:55 pm)</option>
-        <option value="15:55">P7 (3:00 pm - 3:55 pm)</option>
+        <!-- Options will be populated by JavaScript -->
     </select>
 
-    <div id="status">Time remaining:</div>
-    <div id="timer">00:00:00</div>
+    <div id="status">Loading...</div>
+    <div id="timer">00:00</div>
 </div>
 
 <script>
+    // School Schedule setup (Start and End times in 24h format)
+    const schedule = {
+        'p1': { start: '09:00', end: '09:55', label: 'P1 (9:00 am - 9:55 am)' },
+        'p2': { start: '10:00', end: '10:55', label: 'P2 (10:00 am - 10:55 am)' },
+        'p3': { start: '11:15', end: '12:10', label: 'P3 (11:15 am - 12:10 pm)' },
+        'p4': { start: '12:15', end: '13:05', label: 'P4 (12:15 pm - 1:05 pm)' },
+        'p5': { start: '12:55', end: '13:45', label: 'P5 (12:55 pm - 1:45 pm)' },
+        'p6': { start: '14:05', end: '14:55', label: 'P6 (2:05 pm - 2:55 pm)' },
+        'p7': { start: '15:00', end: '15:55', label: 'P7 (3:00 pm - 3:55 pm)' }
+    };
+
     const periodSelect = document.getElementById('periodSelect');
     const timerDisplay = document.getElementById('timer');
     const statusDisplay = document.getElementById('status');
 
+    // Populate the dropdown programmatically
+    for (const [key, data] of Object.entries(schedule)) {
+        const option = document.createElement('option');
+        option.value = key;
+        option.textContent = data.label;
+        periodSelect.appendChild(option);
+    }
+
+    // Helper function to build a Date object for today from a "HH:MM" string
+    function getTimeObject(timeStr) {
+        const [hours, minutes] = timeStr.split(':');
+        const dateObj = new Date();
+        dateObj.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+        return dateObj;
+    }
+
+    // Helper function to format milliseconds into HH:MM:SS or MM:SS
+    function formatTimeRemaining(ms) {
+        const totalSeconds = Math.floor(ms / 1000);
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+
+        const parts = [];
+        if (hours > 0) parts.push(hours.toString().padStart(2, '0'));
+        parts.push(minutes.toString().padStart(2, '0'));
+        parts.push(seconds.toString().padStart(2, '0'));
+        
+        return parts.join(':');
+    }
+
     function updateTimer() {
         const now = new Date();
-        const endStr = periodSelect.value.split(':');
+        const selectedPeriod = schedule[periodSelect.value];
         
-        // Create a date object for the end time of the selected period today
-        const endTime = new Date();
-        endTime.setHours(parseInt(endStr[0], 10));
-        endTime.setMinutes(parseInt(endStr[1], 10));
-        endTime.setSeconds(0);
-        endTime.setMilliseconds(0);
+        const startTime = getTimeObject(selectedPeriod.start);
+        const endTime = getTimeObject(selectedPeriod.end);
 
-        // Calculate the difference in milliseconds
-        const diff = endTime - now;
-
-        if (diff <= 0) {
-            timerDisplay.textContent = "00:00:00";
-            timerDisplay.style.color = "#27ae60"; // Green for finished
-            statusDisplay.textContent = "This lesson has finished!";
-        } else {
-            timerDisplay.style.color = "#e74c3c"; // Red for counting down
+        // 1. Before the lesson has started
+        if (now < startTime) {
+            timerDisplay.classList.remove('active-lesson');
+            timerDisplay.style.color = 'var(--abingdon-navy)';
+            statusDisplay.textContent = "Lesson starts in:";
+            timerDisplay.textContent = formatTimeRemaining(startTime - now);
+        } 
+        // 2. During the lesson
+        else if (now >= startTime && now < endTime) {
+            timerDisplay.classList.add('active-lesson'); // Adds the pink pulse effect
             statusDisplay.textContent = "Time remaining:";
-            
-            // Convert to hours, minutes, and seconds
-            const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-            const minutes = Math.floor((diff / 1000 / 60) % 60);
-            const seconds = Math.floor((diff / 1000) % 60);
-
-            // Format with leading zeros
-            const formattedHours = hours.toString().padStart(2, '0');
-            const formattedMinutes = minutes.toString().padStart(2, '0');
-            const formattedSeconds = seconds.toString().padStart(2, '0');
-
-            if (hours > 0) {
-                timerDisplay.textContent = `${formattedHours}:${formattedMinutes}:${formattedSeconds}`;
-            } else {
-                timerDisplay.textContent = `${formattedMinutes}:${formattedSeconds}`;
-            }
+            timerDisplay.textContent = formatTimeRemaining(endTime - now);
+        } 
+        // 3. After the lesson has finished
+        else {
+            timerDisplay.classList.remove('active-lesson');
+            timerDisplay.style.color = '#10B981'; // Green to indicate completion
+            statusDisplay.textContent = "Lesson Finished!";
+            timerDisplay.textContent = "00:00";
         }
     }
 
-    // Update immediately, then every second
+    // Listen for dropdown changes
     periodSelect.addEventListener('change', updateTimer);
+    
+    // Start interval
     updateTimer();
     setInterval(updateTimer, 1000);
 </script>
